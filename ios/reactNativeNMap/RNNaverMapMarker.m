@@ -22,12 +22,6 @@
   UIView *_iconView;
 }
 
-  static NSMutableDictionary *_overlayImageHolder;
-
-  +(void)initialize {
-    _overlayImageHolder = [[NSMutableDictionary alloc] init];
-  }
-
 - (instancetype)init
 {
   if ((self = [super init])) {
@@ -192,13 +186,6 @@
     return;
   }
 
-  NMFOverlayImage *overlayImage = [_overlayImageHolder valueForKey:image];
-  if (overlayImage != nil) {
-    if (self->_iconImageView) [self->_iconImageView removeFromSuperview];
-    self->_realMarker.iconImage = overlayImage;
-    return;
-  }
-
   _reloadImageCancellationBlock = [[_bridge moduleForClass:[RCTImageLoader class]] loadImageWithURLRequest:[RCTConvert NSURLRequest:_image]
                                                                           size:self.bounds.size
                                                                          scale:RCTScreenScale()
@@ -215,8 +202,6 @@
                                                                    if (self->_iconImageView) [self->_iconImageView removeFromSuperview];
                                                                    NMFOverlayImage *overlayImage = [NMFOverlayImage overlayImageWithImage: image];
                                                                    self->_realMarker.iconImage = overlayImage;
-
-                                                                   [_overlayImageHolder setObject:overlayImage forKey:self->_image];
                                                                  });
                                                                }];
 }
