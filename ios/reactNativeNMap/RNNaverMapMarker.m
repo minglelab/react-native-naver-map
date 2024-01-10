@@ -186,6 +186,8 @@
     return;
   }
 
+  self->_realMarker.hidden = YES;
+
   _reloadImageCancellationBlock = [[_bridge moduleForClass:[RCTImageLoader class]] loadImageWithURLRequest:[RCTConvert NSURLRequest:_image]
                                                                           size:self.bounds.size
                                                                          scale:RCTScreenScale()
@@ -202,6 +204,7 @@
                                                                    if (self->_iconImageView) [self->_iconImageView removeFromSuperview];
                                                                    NMFOverlayImage *overlayImage = [NMFOverlayImage overlayImageWithImage: image];
                                                                    self->_realMarker.iconImage = overlayImage;
+                                                                   self->_realMarker.hidden = NO;
                                                                  });
                                                                }];
 }
