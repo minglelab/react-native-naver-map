@@ -202,7 +202,7 @@
   _reloadImageCancellationBlock = [[_bridge moduleForClass:[RCTImageLoader class]] loadImageWithURLRequest:[RCTConvert NSURLRequest:_image]
                                                                           size:self.bounds.size
                                                                          scale:RCTScreenScale()
-                                                                       clipped:YES
+                                                                       clipped:NO
                                                                     resizeMode:RCTResizeModeCenter
                                                                  progressBlock:nil
                                                               partialLoadBlock:nil
