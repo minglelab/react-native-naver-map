@@ -1,6 +1,7 @@
 import React, {Component, SyntheticEvent} from 'react';
 import {
     findNodeHandle,
+    HostComponent,
     Image,
     ImageSourcePropType,
     NativeModules,
@@ -13,16 +14,33 @@ import {
     ViewStyle,
 } from 'react-native';
 
-const RNNaverMapView = requireNativeComponent('RNNaverMapView');
+const RNNaverMapView = requireNativeComponent<NaverMapViewProps>('RNNaverMapView');
 const RNNaverMapViewTexture = Platform.select({
-    android: () => requireNativeComponent('RNNaverMapViewTexture'),
+    android: () => requireNativeComponent<NaverMapViewProps>('RNNaverMapViewTexture'),
     ios: () => RNNaverMapView
-})();
-const RNNaverMapMarker = requireNativeComponent('RNNaverMapMarker');
-const RNNaverMapPathOverlay = requireNativeComponent('RNNaverMapPathOverlay');
+})?.() as HostComponent<NaverMapViewProps>;
+const RNNaverMapMarker = requireNativeComponent<{
+    image:string|null;
+    caption?: Omit<MarkerProps['caption'], 'textSize' | 'color' | 'haloColor'> & {
+        textSize: number;
+        color: string | ProcessedColorValue | null | undefined;
+        haloColor: string | ProcessedColorValue | null | undefined;
+    }
+    subCaption?: Omit<MarkerProps['subCaption'], 'textSize' | 'color' | 'haloColor'> & {
+        textSize: number;
+        color: string | ProcessedColorValue | null | undefined;
+        haloColor: string | ProcessedColorValue | null | undefined;
+    }
+}>('RNNaverMapMarker');
+const RNNaverMapPathOverlay = requireNativeComponent<Omit<PathProps, 'pattern'> & { pattern: string | null }>('RNNaverMapPathOverlay');
 const RNNaverMapPolylineOverlay = requireNativeComponent('RNNaverMapPolylineOverlay');
 const RNNaverMapCircleOverlay = requireNativeComponent('RNNaverMapCircleOverlay');
-const RNNaverMapPolygonOverlay = requireNativeComponent('RNNaverMapPolygonOverlay');
+const RNNaverMapPolygonOverlay = requireNativeComponent<Omit<PolygonProps, 'coordinates'> & {
+    coordinates: Coord[] | {
+        exteriorRing: Coord[]
+        interiorRings?: Coord[][]
+    }
+}>('RNNaverMapPolygonOverlay');
 
 export interface Coord {
     latitude: number;
@@ -131,11 +149,10 @@ export interface NaverMapViewProps {
     stopGesturesEnabled?: boolean;
     liteModeEnabled?: boolean;
     useTextureView?: boolean;
-    children?: React.Element;
+    children?: React.ReactNode;
 }
 
 export default class NaverMapView extends Component<NaverMapViewProps, {}> {
-    props: NaverMapViewProps;
     ref?: RNNaverMapView;
     nodeHandle?: null | number;
 
@@ -176,30 +193,30 @@ export default class NaverMapView extends Component<NaverMapViewProps, {}> {
         return Platform.select({
             // @ts-ignore
             android: () => UIManager.dispatchViewManagerCommand(
-                this.nodeHandle,
+                this.nodeHandle || null,
                 // @ts-ignore
                 UIManager.getViewManagerConfig('RNNaverMapView').Commands[command],
                 arg,
             ),
             ios: () =>
                 NativeModules[`RNNaverMapView`][command](this.nodeHandle, ...arg),
-        })();
+        })?.();
     };
 
-    handleOnCameraChange = (event: SyntheticEvent<{}, {
+    handleOnCameraChange = (event: {
         latitude: number;
         longitude: number;
         zoom: number;
         contentsRegion: [Coord, Coord, Coord, Coord, Coord];
         coveringRegion: [Coord, Coord, Coord, Coord, Coord];
-    }>) => this.props.onCameraChange && this.props.onCameraChange(event.nativeEvent);
+    }) => this.props.onCameraChange && this.props.onCameraChange(event);
 
-    handleOnMapClick = (event: SyntheticEvent<{}, {
+    handleOnMapClick = (event: {
         x: number;
         y: number;
         latitude: number;
         longitude: number;
-    }>) => this.props.onMapClick && this.props.onMapClick(event.nativeEvent);
+    }) => this.props.onMapClick && this.props.onMapClick(event);
 
     render() {
         const {
@@ -216,7 +233,7 @@ export default class NaverMapView extends Component<NaverMapViewProps, {}> {
         const ViewClass = useTextureView ? RNNaverMapViewTexture : RNNaverMapView;
 
         return <ViewClass
-            ref={this.resolveRef}
+            ref={this.resolveRef as any}
             {...this.props}
             onInitialized={onInitialized}
             center={center}
@@ -281,8 +298,6 @@ export interface MarkerProps extends MapOverlay {
 }
 
 export class Marker extends Component<MarkerProps> {
-    props: MarkerProps;
-
     render() {
         return <RNNaverMapMarker
             {...this.props}
@@ -311,8 +326,6 @@ export interface CircleProps extends MapOverlay {
 }
 
 export class Circle extends Component<CircleProps> {
-    props: CircleProps;
-
     render() {
         return <RNNaverMapCircleOverlay {...this.props} />;
     }
@@ -325,8 +338,6 @@ interface PolylineProps extends Omit<MapOverlay, "coordinate"> {
 }
 
 export class Polyline extends Component<PolylineProps> {
-    props: PolylineProps;
-
     render() {
         return <RNNaverMapPolylineOverlay {...this.props} />;
     }
@@ -341,8 +352,6 @@ interface PolygonProps extends Omit<MapOverlay, "coordinate"> {
 }
 
 export class Polygon extends Component<PolygonProps> {
-    props: PolygonProps;
-
     render() {
         return Platform.select({
             android: () => <RNNaverMapPolygonOverlay {...this.props} />,
@@ -353,7 +362,7 @@ export class Polygon extends Component<PolygonProps> {
                     interiorRings: this.props.holes,
                 }}
             />
-        })();
+        })?.();
     }
 }
 
@@ -372,8 +381,6 @@ export interface PathProps extends Omit<MapOverlay, "coordinate"> {
 }
 
 export class Path extends Component<PathProps> {
-    props: PathProps;
-
     render() {
         return <RNNaverMapPathOverlay
             {...this.props}
@@ -391,7 +398,7 @@ function getImageUri(src?: ImageSourcePropType): string | null {
     return imageUri;
 }
 
-function parseColor(color?: string | null): string | ProcessedColorValue {
+function parseColor(color?: string | null): string | ProcessedColorValue | null | undefined {
     if (color && Platform.OS === 'ios')
         return processColor(color);
     return color;
